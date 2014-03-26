@@ -29,7 +29,7 @@ wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-
 apt-get update
 apt-get install -q -y tmux vim zsh htop git imagemagick graphviz nodejs \
   postgresql-9.3 postgresql-server-dev-9.3 libssl-dev libxslt-dev libxml2-dev \
-  libreadline-dev python-pip
+  libreadline-dev python-pip exuberant-ctags
 
 echo "##############################"
 echo "Configure Zsh..."
