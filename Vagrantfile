@@ -79,7 +79,7 @@ echo "##############################"
 echo "Install Powerline..."
 echo "##############################"
 cd $HOME_DIR
-pip install --user git+git://github.com/Lokaltog/powerline
+pip install --user vagrant git+git://github.com/Lokaltog/powerline
 
 echo "##############################"
 echo "Installing Rbenv..."
