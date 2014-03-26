@@ -119,7 +119,7 @@ PROVISION
 
 Vagrant.configure("2") do |config|
 
-  config.vm.define :prod do |dev|
+  config.vm.define :development do |dev|
     dev.vm.box = $box_name
     dev.vm.hostname = $hostname
     dev.vm.box_url = $ubuntu_url
