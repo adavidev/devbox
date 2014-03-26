@@ -1,8 +1,8 @@
 $ubuntu_url     = "http://cloud-images.ubuntu.com/vagrant/saucy/current/saucy-server-cloudimg-amd64-vagrant-disk1.box"
-$hostname       = "prod"
+$hostname       = "development"
 $box_name       = "ubuntu-13.10"
-$git_user_email = "briandavidwetzel@gmail.com"
-$git_user_name  = "briandavidwetzel"
+$git_user_email = "CHANGE ME!"
+$git_user_name  = "CHANGE ME"
 $port_forward   = {
   8000 => 8000,
   5000 => 5000
@@ -76,15 +76,8 @@ curl https://raw.github.com/briandavidwetzel/env/master/get | sh
 echo "##############################"
 echo "Install Powerline..."
 echo "##############################"
-echo "Tmux..."
-git clone https://github.com/erikw/tmux-powerline.git $HOME_DIR/.tmux-powerline
-echo "Vim..."
-git clone https://github.com/bling/vim-airline $VIM_BUNDLE_DIR/vim-airline
-echo "Zsh..."
-cd $HOME_DIR/.oh-my-zsh/themes
-wget https://raw.github.com/briandavidwetzel/env/master/bdw.zsh-theme
-cd $HOME_DIR/.tmux-powerline/themes
-wget https://github.com/briandavidwetzel/env/raw/master/tmux-powerline-theme.sh
+cd $HOME_DIR
+git clone https://github.com/Lokaltog/powerline.git
 
 echo "##############################"
 echo "Installing Rbenv..."
