@@ -64,6 +64,8 @@ echo "Installing Rake..."
 git clone git://github.com/tpope/vim-rake.git
 echo "Installing Sensible..."
 git clone git://github.com/tpope/vim-sensible.git
+echo "Installing GitGutter..."
+git clone git://github.com/airblade/vim-gitgutter.git
 
 echo "##############################"
 echo "Download Dotfiles..."
