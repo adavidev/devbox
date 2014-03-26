@@ -50,8 +50,6 @@ echo "Installing NERDCommenter..."
 git clone git://github.com/scrooloose/nerdcommenter.git
 echo "Installing NERDTree..."
 git clone git://github.com/scrooloose/nerdtree.git
-echo "Installing Buffergator..."
-git clone git://github.com/jeetsukumaran/vim-buffergator.git
 echo "Installing Bundler..."
 git clone git://github.com/tpope/vim-bundler.git
 echo "Installing CoffeeScript..."
