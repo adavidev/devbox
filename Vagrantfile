@@ -2,7 +2,7 @@ $ubuntu_url     = "http://cloud-images.ubuntu.com/vagrant/saucy/current/saucy-se
 $hostname       = "development"
 $box_name       = "ubuntu-13.10"
 $git_user_email = "CHANGE ME!"
-$git_user_name  = "CHANGE ME"
+$git_user_name  = "CHANGE ME!"
 $port_forward   = {
   8000 => 8000,
   5000 => 5000
@@ -29,7 +29,7 @@ wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-
 apt-get update
 apt-get install -q -y tmux vim zsh htop git imagemagick graphviz nodejs \
   postgresql-9.3 postgresql-server-dev-9.3 libssl-dev libxslt-dev libxml2-dev \
-  libreadline-dev
+  libreadline-dev python-pip
 
 echo "##############################"
 echo "Configure Zsh..."
@@ -77,7 +77,7 @@ echo "##############################"
 echo "Install Powerline..."
 echo "##############################"
 cd $HOME_DIR
-git clone https://github.com/Lokaltog/powerline.git
+pip install --user git+git://github.com/Lokaltog/powerline
 
 echo "##############################"
 echo "Installing Rbenv..."
