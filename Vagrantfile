@@ -1,140 +1,181 @@
-$ubuntu_url     = "http://cloud-images.ubuntu.com/vagrant/saucy/current/saucy-server-cloudimg-amd64-vagrant-disk1.box"
-$hostname       = "development"
-$box_name       = "ubuntu-13.10"
-$git_user_email = "CHANGE ME!"
-$git_user_name  = "CHANGE ME!"
-$port_forward   = {
-  8000 => 8000,
-  5000 => 5000
-}
+#▐▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▌
+#▐ ██╗   ██╗ █████╗  ██████╗ ██████╗  █████╗ ███╗   ██╗████████╗███████╗██╗██╗     ███████╗ ▌
+#▐ ██║   ██║██╔══██╗██╔════╝ ██╔══██╗██╔══██╗████╗  ██║╚══██╔══╝██╔════╝██║██║     ██╔════╝ ▌
+#▐ ██║   ██║███████║██║  ███╗██████╔╝███████║██╔██╗ ██║   ██║   █████╗  ██║██║     █████╗   ▌
+#▐ ╚██╗ ██╔╝██╔══██║██║   ██║██╔══██╗██╔══██║██║╚██╗██║   ██║   ██╔══╝  ██║██║     ██╔══╝   ▌
+#▐  ╚████╔╝ ██║  ██║╚██████╔╝██║  ██║██║  ██║██║ ╚████║   ██║   ██║     ██║███████╗███████╗ ▌
+#▐   ╚═══╝  ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝   ╚═╝     ╚═╝╚══════╝╚══════╝ ▌
+#▐▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▌
 
-$provision  = <<PROVISION
-HOME_DIR="/home/vagrant"
-echo "##############################"
-echo "Provisioning..."
-echo "##############################"
+#############################################################################################
+# Configuration                                                                             #
+#############################################################################################
 
-# Disable prompt
-export DEBIAN_FRONTEND=noninteractive
-echo "Configure timezone..."
-locale-gen en_US.UTF-8
-ln -sf /usr/share/zoneinfo/EST /etc/localtime
+$ubuntu_url      = "http://cloud-images.ubuntu.com/vagrant/saucy/current/saucy-server-cloudimg-amd64-vagrant-disk1.box"
+$hostname        = "development"
+$box_name        = "ubuntu-13.10"
+$cpus            = 2
+$memory          = 2056
+$port_forward    = { 8000 => 8000, 5000 => 5000, 3000 => 3000 }
+$sync_folders    = {
+                     '/Users/briandavidwetzel/Documents' => '/home/vagrant/Documents',
+                     '/Users/briandavidwetzel/Downloads' => '/home/vagrant/Downloads',
+                     '/Users/briandavidwetzel/code'      => '/home/vagrant/code',
+                     '/Users/briandavidwetzel/.ssh/dev'  => '/home/vagrant/.ssh'
+                   }
+$rubies          = ['1.9.3-p484', '2.0.0-p448']
+$provision_tasks = [
+                     :disable_prompt,
+                     :configure_timezone,
+                     :install_packages,
+                     :configure_zsh,
+                     :install_rbenv,
+                     :get_configuration_files,
+                     :install_powerline,
+                     :configure_postgres,
+                     :install_heroku_toolbelt,
+                     :chown_home_dir #DO THIS LAST
+                   ]
+$with_powerline  = true
 
-echo "##############################"
-echo "Installing Packages..."
-echo "##############################"
-echo "Add postgres apt-repo..."
-add-apt-repository "deb http://apt.postgresql.org/pub/repos/apt/ saucy-pgdg main"
-wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-apt-get update
-apt-get install -q -y tmux vim zsh htop git imagemagick graphviz nodejs \
-  postgresql-9.3 postgresql-server-dev-9.3 libssl-dev libxslt-dev libxml2-dev \
-  libreadline-dev python-pip exuberant-ctags
+#############################################################################################
+# Helper Methods                                                                            #
+#############################################################################################
+def comment_banner(msg)
+  banner = ""
+  banner << "echo '########################################'\n"
+  banner << "echo '#{msg}...'\n"
+  banner << "echo '########################################'\n"
+end
 
-echo "##############################"
-echo "Configure Zsh..."
-echo "##############################"
-git clone git://github.com/robbyrussell/oh-my-zsh.git $HOME_DIR/.oh-my-zsh
-# will get .zshrc file later...
-chsh -s $(which zsh) vagrant
+def clone_into(repo, target)
+  "git clone https://github.com/#{repo} #{target}\n"
+end
 
-echo "##############################"
-echo "Configure Vim..."
-echo "##############################"
-VIM_BUNDLE_DIR=$HOME_DIR/.vim/bundle
-mkdir -p $HOME_DIR/.vim/autoload $HOME_DIR/.vim/bundle
-echo "Installing Pathogen..."
-curl -Sso $HOME_DIR/.vim/autoload/pathogen.vim https://raw.github.com/tpope/vim-pathogen/master/autoload/pathogen.vim
-cd $VIM_BUNDLE_DIR
-echo "Installing NERDCommenter..."
-git clone git://github.com/scrooloose/nerdcommenter.git
-echo "Installing NERDTree..."
-git clone git://github.com/scrooloose/nerdtree.git
-echo "Installing Bundler..."
-git clone git://github.com/tpope/vim-bundler.git
-echo "Installing CoffeeScript..."
-git clone https://github.com/kchmck/vim-coffee-script.git
-echo "Installing Fugitive..."
-git clone git://github.com/tpope/vim-fugitive.git
-echo "Installing Handlebars..."
-git clone git://github.com/nono/vim-handlebars.git
-echo "Installing Rails..."
-git clone git://github.com/tpope/vim-rails.git
-echo "Installing Rake..."
-git clone git://github.com/tpope/vim-rake.git
-echo "Installing Sensible..."
-git clone git://github.com/tpope/vim-sensible.git
-echo "Installing GitGutter..."
-git clone git://github.com/airblade/vim-gitgutter.git
-echo "Installing CtrlP"
-git clone https://github.com/kien/ctrlp.vim.git
+def change_dir(dir)
+  p  = comment_banner "Changing to Directory: #{dir}"
+  p << "cd #{dir}\n"
+end
 
-echo "##############################"
-echo "Download Dotfiles..."
-echo "##############################"
-cd $HOME_DIR
-curl https://raw.github.com/briandavidwetzel/env/master/get | sh
+def create_dir(dir)
+  p  = comment_banner "Creating Directory: #{dir}"
+  p << "mkdir #{dir}\n"
+end
 
-echo "##############################"
-echo "Install Powerline..."
-echo "##############################"
-cd $HOME_DIR
-pip install vagrant git+git://github.com/Lokaltog/powerline
-git clone https://github.com/Lokaltog/powerline.git
+$home_directory   = '/home/vagrant'
+$config_directory = "#{$home_directory}/.config"
 
-echo "##############################"
-echo "Installing Rbenv..."
-echo "##############################"
-git clone https://github.com/sstephenson/rbenv.git $HOME_DIR/.rbenv
-git clone https://github.com/sstephenson/ruby-build.git $HOME_DIR/.rbenv/plugins/ruby-build
-echo 'export PATH="$HOME/.rbenv/bin:$PATH"' >> $HOME_DIR/.zshrc
-echo 'eval "$(rbenv init -)"' >> $HOME_DIR/.zshrc
+#############################################################################################
+# Provisioning Tasks                                                                        #
+#############################################################################################
 
-echo "##############################"
-echo "Installing Ruby 2.0.0-p353..."
-echo "##############################"
-#TODO: Install ruby versions
-# su  -c "CONFIGURE_OPTS='--with-readline' rbenv install 2.0.0-p247" -s /bin/sh vagrant
+def disable_prompt
+  "export DEBIAN_FRONTEND=noninteractive\n"
+end
 
-echo "##############################"
-echo "Configure Postgresql..."
-echo "##############################"
-su -c 'createuser vagrant -s' postgres
-cd /etc/postgresql/9.3/main/
-rm pg_hba.conf
-wget https://raw.github.com/briandavidwetzel/env/master/pg_hba.conf
-service postgresql restart
+def configure_timezone
+  p  = comment_banner "Configure Timezone"
+  p << "locale-gen en_US.UTF-8\n"
+  p << "ln -sf /usr/share/zoneinfo/EST /etc/localtime\n"
+end
 
-echo "##############################"
-echo "Configure Postgresql..."
-echo "##############################"
-wget -qO- https://toolbelt.heroku.com/install-ubuntu.sh | sh
+def install_packages
+  p  = comment_banner "Install Packages"
+  p << "add-apt-repository 'deb http://apt.postgresql.org/pub/repos/apt/ saucy-pgdg main'\n"
+  p << "wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -\n"
+  p << "apt-get update\n"
+  p << "apt-get install -q -y tmux vim zsh htop git imagemagick graphviz nodejs postgresql-9.3 postgresql-server-dev-9.3 libssl-dev libxslt-dev libxml2-dev libreadline-dev python-pip exuberant-ctags\n"
+end
 
-cd $HOME_DIR
+def configure_zsh
+  p  = comment_banner "Configure Zsh"
+  p << clone_into('robbyrussell/oh-my-zsh', "#{$home_directory}/.oh-my-zsh")
+  p << "chsh -s $(which zsh) vagrant\n"
+end
 
-mkdir $HOME_DIR/code
-git config --global user.email "#{$git_user_email}"
-git config --global user.name "#{$git_user_name}"
+def install_heroku_toolbelt
+  p  = comment_banner 'Install Heroku Toolbelt'
+  p << "wget -qO- https://toolbelt.heroku.com/install-ubuntu.sh | sh\n"
+end
 
-# Do last
-chown -R vagrant:vagrant $HOME_DIR
-PROVISION
+def install_rbenv
+  p  = comment_banner 'Install Rbenv'
+  p << clone_into('sstephenson/rbenv', "#{$home_directory}/.rbenv")
+  p << clone_into('sstephenson/ruby-build', "#{$home_directory}/.rbenv/plugins/ruby-build")
+end
+
+def get_configuration_files
+  p  = comment_banner 'Get Configuration Files'
+  p << clone_into('briandavidwetzel/dotconfig', $config_directory)
+
+  if $with_powerline
+    p << change_dir($config_directory)
+    p << "git checkout with-powerline\n"
+  end
+
+  p << "sh #{$config_directory}/init.sh #{$home_directory}\n"
+  p << "sh #{$config_directory}/pathogen.sh #{$home_directory}\n"
+end
+
+def configure_postgres
+  p  = comment_banner 'Configure Postgres'
+  p << "su -c 'createuser vagrant -s' postgres\n"
+  p << change_dir('/etc/postgresql/9.3/main/')
+  p << "rm pg_hba.conf\n"
+  p << "wget https://raw.github.com/briandavidwetzel/dotconfig/master/pg_hba.conf\n"
+  p << "service postgresql restart\n"
+end
+
+def install_powerline
+  p  = comment_banner 'Install Powerline'
+  p << clone_into('Lokaltog/powerline', "#{$home_directory}/powerline")
+  p << "pip install git+git://github.com/Lokaltog/powerline\n"
+end
+
+def create_code_dir
+  create_dir("#{$home_directory}/code")
+end
+
+def chown_home_dir
+  p  = comment_banner 'Chown Home Directory'
+  p << "chown -R vagrant:vagrant #{$home_directory}\n"
+end
+
+def build_inline_provision
+  $provision  = comment_banner("Provisioning")
+
+  $provision_tasks.each do |t|
+    $provision << send(t)
+  end
+
+  $provision << comment_banner("Provisioning Complete")
+end
+
+build_inline_provision
+
+#############################################################################################
+# Vagrant Definitions                                                                       #
+#############################################################################################
 
 Vagrant.configure("2") do |config|
 
-  config.vm.define :development do |dev|
-    dev.vm.box = $box_name
+  config.vm.define :devbox do |dev|
+    dev.vm.box      = $box_name
     dev.vm.hostname = $hostname
-    dev.vm.box_url = $ubuntu_url
+    dev.vm.box_url  = $ubuntu_url
+
+    dev.vm.provider "virtualbox" do |v|
+        v.memory = $memory
+        v.customize ["modifyvm", :id, "--ioapic", "on"]
+        v.customize ["modifyvm", :id, "--cpus", $cpus]
+    end
 
     $port_forward.each do |k,v|
       dev.vm.network :forwarded_port, :guest => k, :host => v
     end
 
-    config.vm.provider "virtualbox" do |v|
-        v.memory = 2056
-        v.customize ["modifyvm", :id, "--ioapic", "on"]
-        v.customize ["modifyvm", :id, "--cpus", 2]
+    $sync_folders.each do |k,v|
+      dev.vm.synced_folder k, v
     end
 
     dev.vm.provision :shell, inline: $provision
