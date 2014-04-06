@@ -14,35 +14,36 @@
 $ubuntu_url      = "http://cloud-images.ubuntu.com/vagrant/saucy/current/saucy-server-cloudimg-amd64-vagrant-disk1.box"
 $hostname        = "development"
 $box_name        = "ubuntu-13.10"
-$cpus            = 2
-$memory          = 2056
+$cpus            = 3
+$memory          = 3056
 $port_forward    = { 8000 => 8000, 5000 => 5000, 3000 => 3000 }
 $sync_folders    = {
-                     '/Users/briandavidwetzel/Documents'         => '/home/vagrant/Documents',
-                     '/Users/briandavidwetzel/Downloads'         => '/home/vagrant/Downloads',
-                     "/Users/briandavidwetzel/code/#{$hostname}" => '/home/vagrant/code',
-                     '/Users/briandavidwetzel/.ssh/dev'          => '/home/vagrant/.ssh'
+                     '/Users/briandavidwetzel/Documents'          => '/home/vagrant/Documents',
+                     '/Users/briandavidwetzel/Downloads'          => '/home/vagrant/Downloads',
+                     "/Users/briandavidwetzel/code/#{$hostname}"  => '/home/vagrant/code'
+                     #"/Users/briandavidwetzel/.ssh/#{$hostname}"  => '/home/vagrant/.ssh'
                    }
-$rubies          = ['1.9.3-p484', '2.0.0-p451']
+$rubies          = [] #['1.9.3-p448', '2.0.0-p247']
 $repos           = {
                      'finsync/finsync'                    => 'finsync',
                      'finsync/finsync-yodlee-integration' => 'yodlee'
                    }
-$git_prompt      = true
+$git_prompt      = false #true
+$git_user_name   = 'briandavidwetzel'
+$git_user_email  = 'briandavidwetzel@gmail.com'
 $provision_tasks = [
                      :disable_prompt,
                      :configure_timezone,
                      :install_packages,
                      :configure_zsh,
+                     :get_configuration_files,
                      :install_rbenv,
                      :install_rubies,
-                     :get_configuration_files,
                      :install_powerline,
                      :configure_postgres,
                      :install_heroku_toolbelt,
                      :clone_repos
                    ]
-$with_powerline  = true
 $home_directory   = '/home/vagrant'
 $config_directory = "#{$home_directory}/.config"
 
@@ -57,7 +58,7 @@ class InlineProvisioner
   end
 
   def provision(tasks)
-    prompt_for_github_credentials
+    prompt_for_github_credentials if $git_prompt
 
     "".tap do |p|
       p << comment_banner("Provisioning")
@@ -122,13 +123,21 @@ class InlineProvisioner
     task 'Install Rbenv' do |t|
       t << clone_into('sstephenson/rbenv', "#{$home_directory}/.rbenv")
       t << clone_into('sstephenson/ruby-build', "#{$home_directory}/.rbenv/plugins/ruby-build")
+      t << "chmod a-w #{$config_directory}/sudoers"
+      t << "chmod o-r #{$config_directory}/sudoers"
+      t << "EDITOR='cp #{$config_directory}/sudoers' visudo"
     end
   end
 
   def install_rubies
     task 'Install Rubies' do |t|
       $rubies.each do |r|
-        t << "echo 'Installing Ruby Version #{r}..."
+        t << "echo 'Installing Ruby Version #{r}...'"
+        t << as_vagrant_user("rbenv install #{r}")
+        t << as_vagrant_user("rbenv rehash")
+        t << as_vagrant_user("rbenv shell #{r}")
+        t << as_vagrant_user("gem install bundler --no-rdoc --no-ri")
+        t << as_vagrant_user("rbenv rehash")
       end
     end
   end
@@ -136,10 +145,6 @@ class InlineProvisioner
   def get_configuration_files
     task 'Get Configuration Files' do |t|
       t << clone_into('briandavidwetzel/dotconfig', $config_directory)
-      if $with_powerline
-        t << change_dir($config_directory)
-        t << "git checkout with-powerline"
-      end
       t << "sh #{$config_directory}/init.sh #{$home_directory}"
       t << "sh #{$config_directory}/pathogen.sh #{$home_directory}"
     end
@@ -159,6 +164,13 @@ class InlineProvisioner
     task 'Install Powerline' do |t|
       t << clone_into('Lokaltog/powerline', "#{$home_directory}/powerline")
       t << "pip install git+git://github.com/Lokaltog/powerline"
+    end
+  end
+
+  def configure_git
+    task 'Configure Git' do |t|
+      t << as_vagrant_user("git config --global user.name '#{$git_user_name}'")
+      t << as_vagrant_user("git config --global user.email '#{$git_user_email}'")
     end
   end
 
@@ -210,6 +222,10 @@ class InlineProvisioner
         t << "git clone https://github.com/#{repo} #{target}"
       end
     end
+  end
+
+  def as_vagrant_user(cmd)
+    "sudo -i -H -u vagrant zsh -c \"#{cmd}\""
   end
 
   def change_dir(dir)
